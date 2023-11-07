@@ -1,5 +1,6 @@
 
 module cmdlint
+module error
 module util
 
 usage() {
