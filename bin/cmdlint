@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+## BP010: Release metadata
+## @build_type: bin
+## @build_date: 2023-11-07T23:08:35Z
+set -e
+extern() {
+  extern=$1
+}
+legacy() {
+  legacy=$1
+}
+module() {
+  module=$1
+}
+public() {
+  public=$1
+}
+use() {
+  use=$1
+}
+embed() {
+  embed=$1
+}
+## BP004: Compile the entrypoint
+
+module cmdlint
+module util
+
+usage() {
+    echo "The command linter"
+    echo "  Usage: cmdlint [COMMAND]"
+    echo "  Conduct multiple checks on the output of the COMMAND in typical shell use cases."
+    exit
+}
+
+main() {
+    [ -z "$1" ] && usage
+    [ $# -eq 0 ] && usage
+    [ "$1" = "--help" ] && usage
+
+    local command
+
+    command=$1
+
+    echo "Analyzing: ${command}"
+
+    cmdlint "${command}"
+}
+
+module rules
+
+cmdlint() {
+    local command
+
+    command=$1
+
+    cmdlint_rule_001 "${command}"
+}
+
+public rule_001
+
+cmdlint_rule_001() {
+    local command
+    local output
+
+    command=$1
+
+    output=$(capture_output "${command}")
+
+    cat $output.out
+}
+
+capture_output() {
+    local command
+    local tmp_file
+
+    command=$1
+    tmp_file=$(mktemp -u)
+
+    "${command}" > "${tmp_file}.out" 2> "${tmp_file}.err"
+
+    echo "${tmp_file}"
+}
+## BP005: Execute the entrypoint
+main "$@"
