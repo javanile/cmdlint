@@ -1,14 +1,24 @@
 
+module cmdlint
+module util
+
 usage() {
     echo "The command linter"
     echo "  Usage: cmdlint [COMMAND]"
-    echo "  Run check on output of COMMAND in common shell use cases."
+    echo "  Conduct multiple checks on the output of the COMMAND in typical shell use cases."
     exit
 }
 
 main() {
-  [ $# -eq 0 ] && usage
-  [ "$1" = "--help" ] && usage
+    [ -z "$1" ] && usage
+    [ $# -eq 0 ] && usage
+    [ "$1" = "--help" ] && usage
 
-  echo "Hello World!"
+    local command
+
+    command=$1
+
+    echo "Analyzing: ${command}"
+
+    cmdlint "${command}"
 }
