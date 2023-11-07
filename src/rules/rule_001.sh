@@ -7,5 +7,9 @@ cmdlint_rule_001() {
 
     output=$(capture_output "${command}")
 
-    cat $output.out
+    if output_is_usage_message "${output}.out"; then
+        echo "A"
+    else
+        echo "B"
+    fi
 }

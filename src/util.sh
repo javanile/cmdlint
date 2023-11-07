@@ -10,3 +10,15 @@ capture_output() {
 
     echo "${tmp_file}"
 }
+
+output_is_usage_message() {
+    local output_file
+
+    output_file=$1
+
+    if grep 'Options:' "${output_file}" > /dev/null 2>&1; then
+        return 0
+    fi
+
+    return 1
+}
