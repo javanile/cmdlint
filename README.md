@@ -13,7 +13,7 @@ cmdlint is a command-line utility that analyzes typical use cases of a command p
 
 ## Installation
 
-You can install cmdlint using [pip](https://pip.pypa.io/en/stable/):
+You can install cmdlint using `curl`:
 
 ```bash
 curl https://raw.githubusercontent.com/javanile/cmdlint/main/bin/cmdlint -o cmdlint
