@@ -3,6 +3,8 @@ cmdlint_rule_01x() {
     local command
     local output
     local usage_line
+    local first_word
+    local first_word_offset
 
     command=$1
 
@@ -16,7 +18,9 @@ cmdlint_rule_01x() {
             extract_usage_lines "${output}.out" | while IFS=$'\n' read -r usage_line; do
               if ! echo "${usage_line}" | grep -q "^$command"; then
                 raise_error R012 "${command}" "Usage line does not start with '${command}'"
-                highlight_line "Usage:\n${usage_line}" 0 4 ""
+                first_word=$(echo "${usage_line}" | awk '{print $1}')
+                first_word_prefix=${usage_line%%$first_word*}
+                highlight_line "Usage:\n${usage_line}" "${first_word_prefix}" "${first_word}" "Replace '${first_word}' with '${command}'"
               fi
             done
         fi

@@ -6,7 +6,14 @@ raise_error() {
 }
 
 highlight_line() {
+    local line
+
+    line=$1
+    line_prefix=$2
+    line_highlight=$(echo "$3" | sed 's/./^/g')
+    line_message=$4
+
     echo
-    echo -e "$1"
-    echo "^^^^"
+    echo -e "$line"
+    echo "${line_prefix}${line_highlight} ${line_message}"
 }
