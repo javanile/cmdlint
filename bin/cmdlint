@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ## BP010: Release metadata
 ## @build_type: bin
-## @build_date: 2023-11-07T23:08:35Z
+## @build_date: 2023-11-09T08:55:26Z
 set -e
 extern() {
   extern=$1
@@ -24,7 +24,9 @@ embed() {
 ## BP004: Compile the entrypoint
 
 module cmdlint
+module error
 module util
+module validator
 
 usage() {
     echo "The command linter"
@@ -54,12 +56,54 @@ cmdlint() {
 
     command=$1
 
-    cmdlint_rule_001 "${command}"
+    cmdlint_rule_00x "${command}"
+    cmdlint_rule_01x "${command}"
+    cmdlint_rule_02x "${command}"
 }
 
-public rule_001
+public rule_00x
+public rule_01x
+public rule_02x
 
-cmdlint_rule_001() {
+cmdlint_rule_00x() {
+    local command
+
+    command=$1
+
+    if ! command -v "${command}" >/dev/null 2>&1; then
+        raise_error R000 "${command}" "Missing '${command}' on the system"
+    fi
+}
+
+cmdlint_rule_01x() {
+    local command
+    local output
+    local usage_line
+    local first_word
+    local first_word_offset
+
+    command=$1
+
+    output=$(capture_output "${command}")
+
+    if is_output_a_usage_message "${output}.out"; then
+        if ! grep "'--help'" "${output}.out" >/dev/null 2>&1; then
+            raise_error R011 "${command}" "Missing '--help' on usage message"
+        fi
+        if grep "^Usage:" "${output}.out" >/dev/null 2>&1; then
+            extract_usage_lines "${output}.out" | while IFS=$'\n' read -r usage_line; do
+              if ! echo "${usage_line}" | grep -q "^$command"; then
+                raise_error R012 "${command}" "Usage line does not start with '${command}'"
+                first_word=$(echo "${usage_line}" | awk '{print $1}')
+                first_word_prefix=${usage_line%%$first_word*}
+                highlight_line "Usage:\n${usage_line}" "${first_word_prefix}" "${first_word}" "Replace '${first_word}' with '${command}'"
+              fi
+            done
+        fi
+    fi
+}
+
+cmdlint_rule_02x() {
     local command
     local output
 
@@ -67,7 +111,32 @@ cmdlint_rule_001() {
 
     output=$(capture_output "${command}")
 
-    cat $output.out
+    if is_output_a_usage_message "${output}.out"; then
+      if has_output_subcommands "${output}.out"; then
+         extract_subcommands "${output}.out" | while read -r subcommand; do
+           cmdlint_rule_01x "${command} ${subcommand}"
+         done
+      fi
+    fi
+}
+
+raise_error() {
+    echo "--------------------------------------------------------------"
+    echo " $1 | Command: $2"
+    echo "      |   Error: $3"
+}
+
+highlight_line() {
+    local line
+
+    line=$1
+    line_prefix=$2
+    line_highlight=$(echo "$3" | sed 's/./^/g')
+    line_message=$4
+
+    echo
+    echo -e "$line"
+    echo "${line_prefix}${line_highlight} ${line_message}"
 }
 
 capture_output() {
@@ -77,9 +146,75 @@ capture_output() {
     command=$1
     tmp_file=$(mktemp -u)
 
-    "${command}" > "${tmp_file}.out" 2> "${tmp_file}.err"
+    ${command} > "${tmp_file}.out" 2> "${tmp_file}.err" && true
 
     echo "${tmp_file}"
+}
+
+extract_subcommands() {
+  local output_file
+  local capture_subcommands
+  local subcommand
+
+  output_file=$1
+
+  while IFS=$'\n' read -r line; do
+    [ -z "${line// }" ] && continue
+    if [ "${line}" = "Commands:" ]; then
+      capture_subcommands=true
+    elif [ "${capture_subcommands}" = true ]; then
+      if echo "${line}" | grep -q "^[[:space:]]"; then
+        subcommand=$(echo "${line}" | awk '{print $1}')
+        echo "${subcommand}"
+      else
+        capture_subcommands=false
+      fi
+    fi
+  done < "${output_file}"
+}
+
+extract_usage_lines() {
+  local output_file
+  local capture_usage_lines
+  local usage_line
+
+  output_file=$1
+
+  while IFS=$'\n' read -r line; do
+    [ -z "${line// }" ] && continue
+    if [ "${line}" = "Usage:" ]; then
+      capture_usage_lines=true
+    elif [ "${capture_usage_lines}" = true ]; then
+      if echo "${line}" | grep -q "^[[:space:]]"; then
+        echo "${line}"
+      else
+        capture_usage_lines=false
+      fi
+    fi
+  done < "${output_file}"
+}
+is_output_a_usage_message() {
+    local output_file
+
+    output_file=$1
+
+    if grep 'Options:' "${output_file}" > /dev/null 2>&1; then
+        return 0
+    fi
+
+    return 1
+}
+
+has_output_subcommands() {
+    local output_file
+
+    output_file=$1
+
+    if grep 'Commands:' "${output_file}" > /dev/null 2>&1; then
+        return 0
+    fi
+
+    return 1
 }
 ## BP005: Execute the entrypoint
 main "$@"

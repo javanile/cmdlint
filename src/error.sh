@@ -13,7 +13,8 @@ highlight_line() {
     line_highlight=$(echo "$3" | sed 's/./^/g')
     line_message=$4
 
-    echo
+    echo ""
     echo -e "$line"
     echo "${line_prefix}${line_highlight} ${line_message}"
+    echo ""
 }
