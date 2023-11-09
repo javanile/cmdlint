@@ -6,7 +6,7 @@ capture_output() {
     command=$1
     tmp_file=$(mktemp -u)
 
-    "${command}" > "${tmp_file}.out" 2> "${tmp_file}.err"
+    ${command} > "${tmp_file}.out" 2> "${tmp_file}.err" && true
 
     echo "${tmp_file}"
 }
@@ -28,6 +28,27 @@ extract_subcommands() {
         echo "${subcommand}"
       else
         capture_subcommands=false
+      fi
+    fi
+  done < "${output_file}"
+}
+
+extract_usage_lines() {
+  local output_file
+  local capture_usage_lines
+  local usage_line
+
+  output_file=$1
+
+  while IFS=$'\n' read -r line; do
+    [ -z "${line// }" ] && continue
+    if [ "${line}" = "Usage:" ]; then
+      capture_usage_lines=true
+    elif [ "${capture_usage_lines}" = true ]; then
+      if echo "${line}" | grep -q "^[[:space:]]"; then
+        echo "${line}"
+      else
+        capture_usage_lines=false
       fi
     fi
   done < "${output_file}"
