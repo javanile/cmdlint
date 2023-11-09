@@ -1,5 +1,5 @@
 
-cmdlint_rule_000() {
+cmdlint_rule_00x() {
     local command
 
     command=$1

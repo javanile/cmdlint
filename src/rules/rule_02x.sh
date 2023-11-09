@@ -1,5 +1,5 @@
 
-cmdlint_rule_002() {
+cmdlint_rule_00x() {
     local command
     local output
 
