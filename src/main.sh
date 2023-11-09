@@ -2,6 +2,7 @@
 module cmdlint
 module error
 module util
+module validator
 
 usage() {
     echo "The command linter"

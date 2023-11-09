@@ -11,14 +11,24 @@ capture_output() {
     echo "${tmp_file}"
 }
 
-output_is_usage_message() {
-    local output_file
+extract_subcommands() {
+  local output_file
+  local capture_subcommands
+  local subcommand
 
-    output_file=$1
+  output_file=$1
 
-    if grep 'Options:' "${output_file}" > /dev/null 2>&1; then
-        return 0
+  while IFS=$'\n' read -r line; do
+    [ -z "${line// }" ] && continue
+    if [ "${line}" = "Commands:" ]; then
+      capture_subcommands=true
+    elif [ "${capture_subcommands}" = true ]; then
+      if echo "${line}" | grep -q "^[[:space:]]"; then
+        subcommand=$(echo "${line}" | awk '{print $1}')
+        echo "${subcommand}"
+      else
+        capture_subcommands=false
+      fi
     fi
-
-    return 1
+  done < "${output_file}"
 }

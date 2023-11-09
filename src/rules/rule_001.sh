@@ -7,7 +7,7 @@ cmdlint_rule_001() {
 
     output=$(capture_output "${command}")
 
-    if output_is_usage_message "${output}.out"; then
+    if is_output_a_usage_message "${output}.out"; then
         if ! grep "'--help'" "${output}.out" >/dev/null 2>&1; then
             raise_error R001 "${command}" "Missing '--help' on usage message"
         fi
