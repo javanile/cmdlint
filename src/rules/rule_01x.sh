@@ -8,8 +8,8 @@ cmdlint_rule_01x() {
   local first_word_offset
   local exit_code
 
-  command=$1
-  ignore_rules=$2
+  command="$1"
+  ignore_rules="$2"
   exit_code=0
 
   output=$(capture_output "${command}")
@@ -21,10 +21,12 @@ cmdlint_rule_01x() {
         exit_code=1
       fi
     fi
-    if grep "^Usage:" "${output}.out" >/dev/null 2>&1; then
-      IFS=$'\n'
-      for usage_line in $(extract_usage_lines "${output}.out"); do
-        if [ "${ignore_rules/R012/}" = "${ignore_rules}" ]; then
+    if [ "${ignore_rules/R012/}" = "${ignore_rules}" ]; then
+      echo "Checking usage lines for '${command}' ${ignore_rules/R012/} = ${ignore_rules} "
+      if grep "^Usage:" "${output}.out" >/dev/null 2>&1; then
+        IFS=$'\n'
+        for usage_line in $(extract_usage_lines "${output}.out"); do
+          echo "Usage: ${usage_line}"
           if ! echo "${usage_line}" | grep -q "^$command"; then
             raise_error R012 "${command}" "Usage line does not start with '${command}'"
             first_word=$(echo "${usage_line}" | awk '{print $1}')
@@ -32,8 +34,8 @@ cmdlint_rule_01x() {
             highlight_line "Usage:\n${usage_line}" "${first_word_prefix}" "${first_word}" "Replace '${first_word}' with '${command}'"
             exit_code=1
           fi
-        fi
-      done
+        done
+      fi
     fi
   fi
 
