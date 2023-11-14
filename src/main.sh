@@ -5,22 +5,41 @@ module util
 module validator
 
 usage() {
-    echo "The command linter"
-    echo "  Usage: cmdlint [COMMAND]"
-    echo "  Conduct multiple checks on the output of the COMMAND in typical shell use cases."
-    exit
+  echo "====[ THE COMMAND LINTER ]===="
+  echo "Conduct multiple checks on the output"
+  echo "of the COMMAND in typical shell use cases."
+  echo
+  echo "Usage:   cmdlint [OPTION] [COMMAND]"
+  echo
+  echo "Options:"
+  echo "  --ignore RULE_LIST    Ignore rules from the list (eg. R001,R002)"
+  echo "  --help                Display this help message"
+  exit
 }
 
 main() {
-    [ -z "$1" ] && usage
-    [ $# -eq 0 ] && usage
-    [ "$1" = "--help" ] && usage
+  local command
+  local ignore_rules
 
-    local command
+  [ -z "$1" ] && usage
+  [ $# -eq 0 ] && usage
+  [ "$1" = "--help" ] && usage
+  if [ "$1" = "--ignore" ]; then
+    ignore_rules=$2
+    shift 2
+  fi
 
-    command=$1
+  command=$1
 
-    echo "Analyzing: ${command}"
+  echo "--------------------------------------------------------------"
+  echo " Analyzing: ${command}"
+  echo "  Ignoring: ${ignore_rules}"
 
-    cmdlint "${command}"
+  cmdlint "${command}" "${ignore_rules}" && true
+
+  if [ $? -eq 1 ]; then
+    echo "Exit with analysis error"
+
+    exit 1
+  fi
 }
