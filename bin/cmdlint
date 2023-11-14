@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ## BP010: Release metadata
 ## @build_type: bin
-## @build_date: 2023-11-09T08:57:17Z
+## @build_date: 2023-11-14T16:20:06Z
 set -e
 extern() {
   extern=$1
@@ -29,36 +29,67 @@ module util
 module validator
 
 usage() {
-    echo "The command linter"
-    echo "  Usage: cmdlint [COMMAND]"
-    echo "  Conduct multiple checks on the output of the COMMAND in typical shell use cases."
-    exit
+  echo "====[ THE COMMAND LINTER ]===="
+  echo "Conduct multiple checks on the output"
+  echo "of the COMMAND in typical shell use cases."
+  echo
+  echo "Usage:   cmdlint [OPTION] [COMMAND]"
+  echo
+  echo "Options:"
+  echo "  --ignore RULE_LIST    Ignore rules from the list (eg. R001,R002)"
+  echo "  --help                Display this help message"
+  exit
 }
 
 main() {
-    [ -z "$1" ] && usage
-    [ $# -eq 0 ] && usage
-    [ "$1" = "--help" ] && usage
+  local command
+  local ignore_rules
 
-    local command
+  [ -z "$1" ] && usage
+  [ $# -eq 0 ] && usage
+  [ "$1" = "--help" ] && usage
+  if [ "$1" = "--ignore" ]; then
+    ignore_rules=$2
+    shift 2
+  fi
 
-    command=$1
+  command="$1"
 
-    echo "Analyzing: ${command}"
+  echo "--------------------------------------------------------------"
+  echo " Analyzing: ${command}"
+  echo "  Ignoring: ${ignore_rules}"
 
-    cmdlint "${command}"
+  cmdlint "${command}" "${ignore_rules}" && true
+
+  if [ $? -eq 1 ]; then
+    echo "--------------------------------------------------------------"
+    echo " FAIL | Result: Exit with analysis problems!"
+    echo "--------------------------------------------------------------"
+    exit 1
+  fi
+
+  echo "    Result: OK!"
+  echo "--------------------------------------------------------------"
 }
 
 module rules
 
 cmdlint() {
-    local command
+  local command
+  local ignore_rules
+  local exit_code
 
-    command=$1
+  command=$1
+  ignore_rules=$2
+  exit_code=0
 
-    cmdlint_rule_00x "${command}"
-    cmdlint_rule_01x "${command}"
-    cmdlint_rule_02x "${command}"
+  cmdlint_rule_00x "${command}" "${ignore_rules}" || exit_code=$?
+
+  cmdlint_rule_01x "${command}" "${ignore_rules}" || exit_code=$?
+
+  cmdlint_rule_02x "${command}" "${ignore_rules}" || exit_code=$?
+
+  return ${exit_code}
 }
 
 public rule_00x
@@ -66,58 +97,95 @@ public rule_01x
 public rule_02x
 
 cmdlint_rule_00x() {
-    local command
+  local command
+  local exit_code
 
-    command=$1
+  command=$1
+  exit_code=0
 
-    if ! command -v "${command}" >/dev/null 2>&1; then
-        raise_error R000 "${command}" "Missing '${command}' on the system"
-    fi
+  if ! command -v "${command}" >/dev/null 2>&1; then
+    raise_error R000 "${command}" "Missing '${command}' on the system"
+    exit_code=1
+  fi
+
+  return ${exit_code}
 }
 
 cmdlint_rule_01x() {
-    local command
-    local output
-    local usage_line
-    local first_word
-    local first_word_offset
+  local command
+  local ignore_rules
+  local output
+  local usage_line
+  local first_word
+  local first_word_offset
+  local exit_code
 
-    command=$1
+  command="$1"
+  ignore_rules="$2"
+  exit_code=0
 
-    output=$(capture_output "${command}")
+  output=$(capture_output "${command}")
 
-    if is_output_a_usage_message "${output}.out"; then
-        if ! grep "'--help'" "${output}.out" >/dev/null 2>&1; then
-            raise_error R011 "${command}" "Missing '--help' on usage message"
-        fi
-        if grep "^Usage:" "${output}.out" >/dev/null 2>&1; then
-            extract_usage_lines "${output}.out" | while IFS=$'\n' read -r usage_line; do
-              if ! echo "${usage_line}" | grep -q "^$command"; then
-                raise_error R012 "${command}" "Usage line does not start with '${command}'"
-                first_word=$(echo "${usage_line}" | awk '{print $1}')
-                first_word_prefix=${usage_line%%$first_word*}
-                highlight_line "Usage:\n${usage_line}" "${first_word_prefix}" "${first_word}" "Replace '${first_word}' with '${command}'"
-              fi
-            done
-        fi
+  if is_output_a_usage_message "${output}.out"; then
+    if [ "${ignore_rules/R011/}" = "${ignore_rules}" ]; then
+      if ! grep "'--help'" "${output}.out" >/dev/null 2>&1; then
+        raise_error R011 "${command}" "Missing '--help' on usage message"
+        exit_code=1
+      fi
     fi
+    if grep "^Usage:" "${output}.out" >/dev/null 2>&1; then
+      IFS=$'\n'
+      for usage_line in $(extract_usage_lines "${output}.out"); do
+        if [ "${ignore_rules/R012/}" = "${ignore_rules}" ]; then
+          if ! echo "${usage_line}" | grep -q "^$command"; then
+            raise_error R012 "${command}" "Usage line does not start with '${command}'"
+            first_word=$(echo "${usage_line}" | awk '{print $1}')
+            first_word_prefix=${usage_line%%$first_word*}
+            highlight_line "Usage:\n${usage_line}" "${first_word_prefix}" "${first_word}" "Replace '${first_word}' with '${command}'"
+            exit_code=1
+          fi
+        fi
+        if [ "${ignore_rules/R013/}" = "${ignore_rules}" ]; then
+          first_word=$(echo "${usage_line}" | awk '{print $1}')
+          first_word_prefix=${usage_line%%$first_word*}
+          if [ "${#first_word_prefix}" -ne 2 ]; then
+            raise_error R013 "${command}" "Usage line does not start with 2 spaces"
+            highlight_line "Usage:\n${usage_line}" "" "${first_word_prefix}" "Replace ${#first_word_prefix} beginning spaces with 2 spaces"
+            exit_code=1
+          fi
+        fi
+      done
+    fi
+
+  fi
+
+  return ${exit_code}
 }
 
 cmdlint_rule_02x() {
-    local command
-    local output
+  local command
+  local output
+  local exit_code
+  local subcommand
+  local ignore_rules
 
-    command=$1
+  command="$1"
+  ignore_rules="$2"
+  exit_code=0
 
-    output=$(capture_output "${command}")
+  output=$(capture_output "${command}")
 
-    if is_output_a_usage_message "${output}.out"; then
-      if has_output_subcommands "${output}.out"; then
-         extract_subcommands "${output}.out" | while read -r subcommand; do
-           cmdlint_rule_01x "${command} ${subcommand}"
-         done
-      fi
+  if is_output_a_usage_message "${output}.out"; then
+
+    if has_output_subcommands "${output}.out"; then
+      IFS=$'\n'
+      for subcommand in $(extract_subcommands "${output}.out"); do
+        cmdlint_rule_01x "${command} ${subcommand}" "${ignore_rules}" || exit_code=$?
+      done
     fi
+  fi
+
+  return ${exit_code}
 }
 
 raise_error() {
@@ -141,15 +209,15 @@ highlight_line() {
 }
 
 capture_output() {
-    local command
-    local tmp_file
+  local command
+  local tmp_file
 
-    command=$1
-    tmp_file=$(mktemp -u)
+  command=$1
+  tmp_file=$(mktemp -u)
 
-    ${command} > "${tmp_file}.out" 2> "${tmp_file}.err" && true
+  eval "${command}" > "${tmp_file}.out" 2> "${tmp_file}.err" || true
 
-    echo "${tmp_file}"
+  echo "${tmp_file}"
 }
 
 extract_subcommands() {
