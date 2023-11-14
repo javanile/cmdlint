@@ -33,7 +33,9 @@ main() {
 
   echo "--------------------------------------------------------------"
   echo " Analyzing: ${command}"
-  echo "  Ignoring: ${ignore_rules}"
+  if [ -n "${ignore_rules}" ]; then
+    echo "  Ignoring: ${ignore_rules}"
+  fi
 
   cmdlint "${command}" "${ignore_rules}" && true
 
