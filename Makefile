@@ -1,9 +1,9 @@
 
+build:
+	@mush build
 
-
-
-test-nuv:
-	@mush run -- --ignore R011,R012 nuv
+test-nuv: build
+	@mush run -- --ignore R011 nuv
 
 test-mush:
 	@mush run mush

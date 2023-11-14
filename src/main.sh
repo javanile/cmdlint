@@ -38,11 +38,12 @@ main() {
   cmdlint "${command}" "${ignore_rules}" && true
 
   if [ $? -eq 1 ]; then
-    echo "Exit with analysis error"
-
+    echo "--------------------------------------------------------------"
+    echo " FAIL | Result: Exit with analysis problems!"
+    echo "--------------------------------------------------------------"
     exit 1
   fi
 
-  echo "    Result: success"
+  echo "    Result: OK!"
   echo "--------------------------------------------------------------"
 }

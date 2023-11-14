@@ -12,8 +12,6 @@ cmdlint_rule_01x() {
   ignore_rules=$2
   exit_code=0
 
-  echo "Ignore rules: ${ignore_rules}"
-
   output=$(capture_output "${command}")
 
   if is_output_a_usage_message "${output}.out"; then
@@ -24,8 +22,8 @@ cmdlint_rule_01x() {
       fi
     fi
     if grep "^Usage:" "${output}.out" >/dev/null 2>&1; then
-      extract_usage_lines "${output}.out" | while IFS=$'\n' read -r usage_line; do
-        echo "${ignore_rules/R012/} = ${ignore_rules}"
+      IFS=$'\n'
+      for usage_line in $(extract_usage_lines "${output}.out"); do
         if [ "${ignore_rules/R012/}" = "${ignore_rules}" ]; then
           if ! echo "${usage_line}" | grep -q "^$command"; then
             raise_error R012 "${command}" "Usage line does not start with '${command}'"
@@ -38,4 +36,6 @@ cmdlint_rule_01x() {
       done
     fi
   fi
+
+  return ${exit_code}
 }
